@@ -1,0 +1,16 @@
+node_modules/
+
+# Local Pi and runtime state
+.pi/
+
+# Test, build, and runtime output
+coverage/
+dist/
+*.log
+*.tsbuildinfo
+
+# OS/editor files
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
