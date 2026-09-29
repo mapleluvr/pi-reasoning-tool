@@ -3,7 +3,7 @@ import { mkdtemp, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
-import { DEFAULT_DESCRIPTION, PARAM_NAME, TOOL_NAME } from "../src/description.ts";
+import { DEFAULT_DESCRIPTION, PARAM_NAME, RECEIPT_TEXT, TOOL_NAME } from "../src/description.ts";
 import { createExtension } from "../src/extension.ts";
 import { createFileDescriptionStore } from "../src/store.ts";
 
@@ -109,13 +109,17 @@ test("a stored custom description wins at load time", async () => {
   });
 });
 
-test("the tool returns the reasoning argument verbatim", async () => {
+test("the tool acknowledges with a short receipt instead of echoing the reasoning", async () => {
   await withTempDir(async (dir) => {
     const { pi } = setup(dir);
     const reasoning = "step 1\nstep 2\nconclusion";
     const result = await pi.tools.get(TOOL_NAME).execute("call-1", { [PARAM_NAME]: reasoning });
-    assert.deepEqual(result.content, [{ type: "text", text: reasoning }]);
+
+    assert.deepEqual(result.content, [{ type: "text", text: RECEIPT_TEXT }]);
     assert.equal(result.details, undefined);
+    // The reasoning already reached the conversation as the tool call argument,
+    // so the result must not spend tokens repeating it.
+    assert.ok(!JSON.stringify(result.content).includes("step 2"));
   });
 });
 

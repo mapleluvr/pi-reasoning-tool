@@ -23,7 +23,7 @@ import {
   ModelRuntime,
   SessionManager,
 } from "@earendil-works/pi-coding-agent";
-import { DEFAULT_DESCRIPTION, PARAM_NAME, STATE_FILE_NAME, TOOL_NAME } from "../src/description.ts";
+import { DEFAULT_DESCRIPTION, PARAM_NAME, RECEIPT_TEXT, STATE_FILE_NAME, TOOL_NAME } from "../src/description.ts";
 
 const PROJECT_ROOT = dirname(dirname(fileURLToPath(import.meta.url)));
 const PROBE_PROVIDER = "ReasoningToolProbe";
@@ -219,11 +219,13 @@ test("a description change reaches the provider payload through the real Pi path
       | undefined;
     assert.deepEqual(parameters?.required, [PARAM_NAME]);
 
-    // 6. The tool itself is a pure pass-through of its single argument.
+    // 6. The tool answers with a short receipt. The reasoning itself is already
+    //    in the conversation as the tool call's argument, so it is not repeated.
     const result = await session
       .getToolDefinition(TOOL_NAME)!
       .execute("probe-call", { [PARAM_NAME]: "reasoning payload" }, undefined, undefined, undefined as never);
-    assert.deepEqual(result.content, [{ type: "text", text: "reasoning payload" }]);
+    assert.deepEqual(result.content, [{ type: "text", text: RECEIPT_TEXT }]);
+    assert.ok(!JSON.stringify(result.content).includes("reasoning payload"));
   } finally {
     reloaded?.dispose();
     session?.dispose();

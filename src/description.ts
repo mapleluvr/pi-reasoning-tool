@@ -34,7 +34,16 @@ export const DEFAULT_DESCRIPTION =
 
 /** Description of the single parameter, shown to the model next to the schema. */
 export const PARAM_DESCRIPTION =
-  "The reasoning text to carry back into the conversation. Pass the complete text, deep or shallow; this tool returns it verbatim.";
+  "The complete reasoning text, deep or shallow. The text is carried by this argument, so the tool only acknowledges it and never repeats it.";
+
+/**
+ * Tool result text.
+ *
+ * A short receipt rather than the reasoning itself: the argument already sits in
+ * the conversation as the assistant's tool call, so echoing it back would only
+ * double the tokens spent on that text.
+ */
+export const RECEIPT_TEXT = "Reasoning recorded.";
 
 /** Trim a description and treat blank input as "no description". */
 export function normalizeDescription(raw: string | undefined): string | undefined {

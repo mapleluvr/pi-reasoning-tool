@@ -2,9 +2,10 @@
  * pi-reasoning-tool extension logic.
  *
  * The experiment: can a model use a tool call's *argument* as the carrier for
- * its reasoning? The tool therefore has exactly one parameter, and its whole
- * job is to return that text so the reasoning lands in the conversation and can
- * be compressed and observed by other extensions.
+ * its reasoning? The tool therefore has exactly one parameter, and it answers
+ * with a short receipt rather than an echo: the argument itself already lands in
+ * the conversation as the tool call, where it can be compressed and observed by
+ * extensions.
  *
  * The tool description is the experiment's control surface, and `/reasoning-tool`
  * adjusts it at runtime. Re-registering a tool with the same name from the same
@@ -21,6 +22,7 @@ import {
   DEFAULT_DESCRIPTION,
   PARAM_DESCRIPTION,
   PARAM_NAME,
+  RECEIPT_TEXT,
   TOOL_LABEL,
   TOOL_NAME,
   normalizeDescription,
@@ -56,12 +58,13 @@ export function createExtension(pi: ExtensionAPI, deps: ReasoningToolDeps): void
       label: TOOL_LABEL,
       description,
       parameters: ReasoningParameters,
-      async execute(_toolCallId, params: ReasoningParams) {
-        // "Fully passed back": the reasoning argument becomes the tool result
-        // verbatim, so it is present in the transcript and visible to any
-        // extension hooking tool results.
+      async execute(_toolCallId, _params: ReasoningParams) {
+        // The reasoning already reached the conversation as this tool call's
+        // argument, so the result is a short receipt instead of an echo: the
+        // text is in context either way, and repeating it would only double the
+        // tokens spent on it.
         return {
-          content: [{ type: "text" as const, text: params[PARAM_NAME] }],
+          content: [{ type: "text" as const, text: RECEIPT_TEXT }],
           details: undefined,
         };
       },
