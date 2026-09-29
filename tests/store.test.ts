@@ -1,6 +1,6 @@
 import assert from "node:assert/strict";
 import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
-import { existsSync } from "node:fs";
+import { closeSync, existsSync, openSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import test from "node:test";
@@ -87,3 +87,30 @@ test("write replaces a previously stored description", async () => {
     assert.equal(store.read(), "second");
   });
 });
+
+// Windows refuses to replace a path that another handle holds open, so the
+// atomic rename cannot complete while the reader below is alive. POSIX systems
+// rename over an open file happily, so this scenario only exists on Windows.
+test(
+  "a write that cannot replace the state file keeps the previous description",
+  { skip: process.platform === "win32" ? false : "requires Windows rename semantics" },
+  async () => {
+    await withTempDir(async (dir) => {
+      const path = join(dir, "state.json");
+      const store = createFileDescriptionStore(path);
+      store.write("previous description");
+
+      const reader = openSync(path, "r");
+      try {
+        assert.throws(() => store.write("next description"));
+      } finally {
+        closeSync(reader);
+      }
+
+      // The failed write must not have destroyed the state that was already
+      // there: losing the file silently reverts to the built-in default.
+      assert.equal(store.read(), "previous description");
+      assert.equal(existsSync(path), true);
+    });
+  },
+);

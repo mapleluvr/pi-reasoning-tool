@@ -31,6 +31,10 @@ transcript 中，可以被 Magic Context 之类的扩展压缩，也会经过 `t
 /reasoning-tool reset       恢复内置默认 description
 ```
 
+注意：`show` 的输出与 usage 提示都走 `ui.notify`，而 `ui.notify` 在无 UI 模式
+（`pi -p`、`--mode json`）下是 no-op。这两种模式下只有 `set` / `reset` 真正生效
+（写盘 + 重注册），但没有任何可见回显。
+
 改动生效路径：
 
 1. 重新注册同名工具。Pi 的 extension loader 对同一扩展的工具表是 `Map.set`，

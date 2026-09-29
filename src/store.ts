@@ -61,13 +61,13 @@ export function createFileDescriptionStore(filePath: string): DescriptionStore {
       const temporaryPath = `${filePath}.tmp-${process.pid}-${Date.now()}-${Math.random().toString(16).slice(2)}`;
       try {
         writeFileSync(temporaryPath, payload, { encoding: "utf8", mode: 0o600 });
-        try {
-          renameSync(temporaryPath, filePath);
-        } catch {
-          // Node's replacement rename varies across Windows filesystems.
-          rmSync(filePath, { force: true });
-          renameSync(temporaryPath, filePath);
-        }
+        // The destination is never unlinked first. `renameSync` does replace an
+        // existing file on Windows, but it fails with EPERM while another handle
+        // holds that file open (a concurrent Pi process reading the state).
+        // Deleting the destination to work around that could destroy the last
+        // good state and leave no file at all, which reads back as the built-in
+        // default, so a failed write surfaces as an error instead.
+        renameSync(temporaryPath, filePath);
       } finally {
         rmSync(temporaryPath, { force: true });
       }

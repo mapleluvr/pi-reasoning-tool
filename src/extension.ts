@@ -107,9 +107,10 @@ export function createExtension(pi: ExtensionAPI, deps: ReasoningToolDeps): void
         }
 
         case "show": {
-          // Report the live registered description, which is what the model sees,
-          // rather than re-reading the store (the file can change underneath us).
-          const source = currentDescription === DEFAULT_DESCRIPTION ? "default" : "custom";
+          // Report the live registered description, which is what the model
+          // actually sees, but take the source from the store: a stored value
+          // that happens to equal the default text is still a custom value.
+          const source = store.read() === undefined ? "default" : "custom";
           ctx.ui.notify(
             `${TOOL_NAME} description (${source}, ${currentDescription.length} chars): ${preview(currentDescription)}${activeNote()}`,
             "info",

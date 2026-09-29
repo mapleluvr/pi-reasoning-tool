@@ -135,13 +135,20 @@ test("/reasoning-tool set updates the registered description and persists it", a
 
 test("/reasoning-tool set warns instead of clearing when the value is empty", async () => {
   await withTempDir(async (dir) => {
-    const { pi, store } = setup(dir);
+    // Store the custom description BEFORE loading the extension, so the
+    // registry really does hold it and the assertion below can catch a wipe.
+    const store = createFileDescriptionStore(join(dir, "state.json"));
     store.write("keep me");
+    const pi = fakePi();
+    createExtension(pi as any, { store });
     const ctx = fakeContext();
+    assert.equal(pi.tools.get(TOOL_NAME).description, "keep me");
 
     await runCommand(pi, ctx, "set   ");
 
-    assert.equal(pi.tools.get(TOOL_NAME).description, DEFAULT_DESCRIPTION);
+    // An empty value is a usage error, not an instruction to clear the
+    // description, so both the registry and the store keep the old value.
+    assert.equal(pi.tools.get(TOOL_NAME).description, "keep me");
     assert.equal(store.read(), "keep me");
     assert.equal(ctx.notifications.at(-1)?.level, "warning");
   });
@@ -214,6 +221,12 @@ test("/reasoning-tool show reports the source of the current description", async
     await runCommand(pi, ctx, "show");
     assert.match(ctx.notifications.at(-1)?.message ?? "", /custom/i);
     assert.match(ctx.notifications.at(-1)?.message ?? "", /custom value/);
+
+    // A stored value that happens to equal the default text is still a stored
+    // value, so the reported source must stay "custom".
+    await runCommand(pi, ctx, `set ${DEFAULT_DESCRIPTION}`);
+    await runCommand(pi, ctx, "show");
+    assert.match(ctx.notifications.at(-1)?.message ?? "", /custom/i);
   });
 });
 

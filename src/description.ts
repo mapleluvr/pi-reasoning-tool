@@ -84,7 +84,13 @@ export function parseCommandArgs(rawArgs: string): ReasoningToolCommand {
   return { kind: "usage" };
 }
 
-/** Help text shown for unknown subcommands and in UI-less modes. */
+/**
+ * Help text for unknown subcommands and for the editor fallback.
+ *
+ * It is delivered through `ui.notify`, which is a no-op in UI-less modes
+ * (`pi -p`, `--mode json`), so it is only visible in interactive modes: the
+ * TUI, or an RPC client that renders `extension_ui_request`.
+ */
 export function usageText(): string {
   return [
     `Usage: /${COMMAND_NAME} [subcommand]`,
