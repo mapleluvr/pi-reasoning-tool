@@ -1,10 +1,89 @@
-# pi-reasoning-tool
+![pi-reasoning-tool](assets/pi-reasoning-tool-title.png)
+
+<div align="center">
+
+*用单一工具参数承载文本，以工具描述作为实验变量。*
+
+<img src="https://img.shields.io/badge/version-0.1.0-EB0404?labelColor=181818" alt="Version: 0.1.0">
+<img src="https://img.shields.io/badge/status-experiment-181818" alt="status: experiment">
+<a href="LICENSE"><img src="https://img.shields.io/badge/license-MIT-FDFDFD?labelColor=181818" alt="License: MIT"></a>
+
+<br>
+<br>
+
+<a href="#快速开始">快速开始</a> ｜
+<a href="#核心思路">核心思路</a> ｜
+<a href="#工具">工具</a> ｜
+<a href="#slash-command">命令</a> ｜
+<a href="#项目结构">项目结构</a> ｜
+<a href="#验证">验证</a>
+
+</div>
+
+---
 
 一个 Pi 扩展，用来做一个实验：**LLM 在编写 Tool Call 时，能否用其中的「参数」作为「推理」的承载位置？**
 
 它注册一个只有一个参数的工具 `deep_reasoning`，参数本身就是推理的承载位置；工具只回一句
 短回执。另外提供 `/reasoning-tool`，让用户随时调整该工具的 description——description 就是这个
 实验的控制变量。
+
+> [!IMPORTANT]
+> 这是工具调用行为实验，不是独立推理引擎。模型是否调用、写入什么内容以及最终答案是否正确，需要分别观察；工具回执本身不证明推理正确。
+
+## 核心思路
+
+只改变工具 description，观察同一参数在调用记录、后续上下文和实际请求中的表现。
+
+| 想知道什么 | 对应观察 |
+| --- | --- |
+| description 是否更新？ | 工具注册表与下一次请求的 `tools[].description` |
+| 文本是否留在上下文？ | assistant 的 tool call arguments，而不是短回执 |
+| 模型是否使用了该工具？ | 真实调用记录；注册成功不代表一定会调用 |
+| 答案是否正确？ | 独立检查题目与最终答案，不用 `Reasoning recorded.` 代替验证 |
+
+## 当前功能
+
+- 注册单字符串参数的 `deep_reasoning` 工具，只返回短回执，不重复参数。
+- 用 `/reasoning-tool` 编辑、查看、设置或重置工具描述。
+- 描述修改重新注册到当前会话，并持久化供新会话读取。
+
+## 快速开始
+
+需要 Pi。使用本地 checkout 时，先在仓库根目录安装依赖：
+
+```powershell
+npm ci
+```
+
+### 1. 加载扩展
+
+在 `settings.json` 的 `packages` 里加相对路径：
+
+```json
+{
+  "packages": ["..\\..\\extensions\\pi-reasoning-tool"]
+}
+```
+
+开发时也可以直接加载：
+
+```powershell
+pi --extension ./index.ts
+```
+
+上述相对路径仅是安装布局示例，需按实际目录调整；它相对于包含该条目的 settings 文件解析。也可在仓库根目录使用 `pi install -l .`，将包声明加入当前项目（加载前需信任项目）。
+
+### 2. 查看并调整描述
+
+进入 Pi 后，先查看默认值，再打开编辑器：
+
+```text
+/reasoning-tool show
+/reasoning-tool edit
+```
+
+观察下一次请求的工具描述与实际调用记录。实验结束可用 `/reasoning-tool reset` 恢复默认。
 
 ## 工具
 
@@ -58,19 +137,26 @@
    `src/description.ts` 的 `TOOL_NAME`，要改是一行。
 4. **不做自定义 renderer。** TUI 里按默认方式显示 tool call 与 result，推理内容直接可见。
 
-## 安装
+## 项目结构
 
-在 `settings.json` 的 `packages` 里加相对路径：
-
-```json
-"..\\..\\extensions\\pi-reasoning-tool"
+```text
+pi-reasoning-tool/
+├── index.ts             # 扩展入口
+├── src/
+│   ├── description.ts   # 工具名、默认描述、短回执
+│   ├── extension.ts     # 工具与命令注册
+│   └── store.ts         # 描述持久化
+├── tests/
+│   └── sdk.test.ts      # Pi loader 与 HTTP wire 观测
+└── assets/              # README 标题图
 ```
 
-开发时也可以直接加载：
+## 支持范围
 
-```powershell
-pi --extension ./index.ts
-```
+- 交互式 TUI 可使用多行编辑器与可见通知。
+- `pi -p` / `--mode json` 下，`show` 与 usage 通知不可见；`set` / `reset` 仍会写盘并重注册。
+- 工具不设自定义 renderer，不增加额外 promptSnippet / promptGuidelines。
+- 历史 provider 实跑是特定模型与输入的观察，不代表所有模型或题目都会有相同行为。
 
 ## 验证
 
@@ -115,4 +201,16 @@ npm run check     # tsc --noEmit
 - 模型随后仅凭上下文里自己的 tool call 参数，仍然给出了**正确**的最终答案
   （6 步表格 + `gcd(3,5)=1` 的可行性说明）。
 
-即：短回执不损害作答，省掉的正是重复那一份 token。
+在这次实跑中，短回执没有损害作答，省掉的是重复输出的那一份文本；不据此推断所有任务都等价。
+
+## 许可证
+
+本项目使用 [MIT 许可证](LICENSE)。
+
+---
+
+<div align="center">
+
+**控制变量，检查调用，独立验证结论。**
+
+</div>
